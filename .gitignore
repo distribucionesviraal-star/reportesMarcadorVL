@@ -1,0 +1,19 @@
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Configuración local
+.env
+
+# Visual Studio Code
+.vscode/
+
+# Archivos de depuración
+DEBUG_*.xlsx
+
+# Archivos temporales
+*.tmp
+
+# Archivos del sistema Windows
+Thumbs.db
+desktop.ini
