@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
+import glob
 
 
 # ============================================================
@@ -20,7 +21,22 @@ import plotly.express as px
 # ============================================================
 
 #CARPETA_REPORTES = r"C:\Users\Lenovo\Downloads\reporteD\dashboardGit\reportesDiariosVL"
-CARPETA_REPORTES = r"C:\Users\Lenovo\Downloads\reporteD\dashboardGit\reportesDiariosVLResumen_*.pdf"
+#CARPETA_REPORTES = r"C:\Users\Lenovo\Downloads\reporteD\dashboardGit\reportesDiarios/VLResumen_*.pdf"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CARPETA_REPORTES = os.path.join(
+    BASE_DIR,
+    "reportesDiariosVL"
+)
+
+PDFS = glob.glob(
+    os.path.join(
+        CARPETA_REPORTES,
+        "Resumen_*.pdf"
+    )
+)
+
 
 def obtener_reportes_pdf():
     if not os.path.exists(CARPETA_REPORTES):
