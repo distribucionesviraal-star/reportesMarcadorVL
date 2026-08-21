@@ -31,12 +31,6 @@ CARPETA_REPORTES = os.path.join(
     "reportesDiariosVL"
 )
 
-# Vacío = administrador (puede elegir cualquier coordinador).
-# Con valor = portal exclusivo que solo enumera ese coordinador.
-# Los archivos app_<coordinador>.py establecen esta variable antes de importar
-# el dashboard, por lo que el filtro no depende de parámetros modificables.
-DASHBOARD_COORDINADOR = os.environ.get("DASHBOARD_COORDINADOR", "").strip()
-
 PDFS = glob.glob(
     os.path.join(
         CARPETA_REPORTES,
@@ -56,30 +50,6 @@ def obtener_reportes_pdf():
         reverse=True
     )
 
-
-def obtener_coordinador_archivo(nombre_archivo):
-    """Obtiene el coordinador desde Resumen_<Coordinador>_<AAAAMMDD>.pdf."""
-    nombre = os.path.basename(str(nombre_archivo))
-    encontrado = re.match(
-        r"^Resumen_(.+)_(\d{8})\.pdf$",
-        nombre,
-        flags=re.IGNORECASE,
-    )
-    if not encontrado:
-        # Resumen_20260820.pdf y nombres que no cumplen el patrón son generales.
-        return "General"
-    coordinador = encontrado.group(1).strip("_ ")
-    return coordinador.replace("_", " ") if coordinador else "General"
-
-
-def obtener_fecha_archivo(nombre_archivo):
-    encontrado = re.search(r"_(\d{8})\.pdf$", str(nombre_archivo), re.IGNORECASE)
-    if not encontrado:
-        return "Sin fecha"
-    fecha = encontrado.group(1)
-    return f"{fecha[6:8]}/{fecha[4:6]}/{fecha[0:4]}"
-
-
 def seleccionar_reporte():
     reportes = obtener_reportes_pdf()
 
@@ -87,47 +57,11 @@ def seleccionar_reporte():
         st.error(f"No existen reportes PDF en: {CARPETA_REPORTES}")
         return None
 
-    reportes_por_coordinador = {}
-    for reporte in reportes:
-        coordinador = obtener_coordinador_archivo(reporte)
-        reportes_por_coordinador.setdefault(coordinador, []).append(reporte)
-
-    coordinadores = sorted(
-        reportes_por_coordinador,
-        key=lambda valor: (valor.lower() == "general", valor.lower()),
-    )
-
-    if DASHBOARD_COORDINADOR:
-        coincidencia = next(
-            (c for c in coordinadores if c.casefold() == DASHBOARD_COORDINADOR.casefold()),
-            None,
-        )
-        if coincidencia is None:
-            st.error(
-                f"No existen reportes para el coordinador configurado: "
-                f"{DASHBOARD_COORDINADOR}"
-            )
-            return None
-        coordinador_seleccionado = coincidencia
-        st.sidebar.markdown(f"### Coordinador: {coordinador_seleccionado}")
-    else:
-        coordinador_seleccionado = st.sidebar.selectbox(
-            "Seleccionar coordinador",
-            coordinadores,
-        )
-    reportes_filtrados = sorted(
-        reportes_por_coordinador[coordinador_seleccionado],
-        reverse=True,
-    )
     seleccionado = st.sidebar.selectbox(
-        "Seleccionar reporte del coordinador",
-        reportes_filtrados,
-        format_func=lambda nombre: f"{obtener_fecha_archivo(nombre)} — {nombre}",
+        "Seleccionar reporte diario",
+        reportes
     )
-    st.sidebar.caption(
-        f"{len(reportes_filtrados)} reporte(s) disponible(s) para {coordinador_seleccionado}."
-    )
-    st.session_state["coordinador_seleccionado"] = coordinador_seleccionado
+
     return os.path.join(CARPETA_REPORTES, seleccionado)
 
 PDF_PATH = None
@@ -1103,16 +1037,9 @@ def generar_dashboard_nuevos_kpi():
     </style>
     """, unsafe_allow_html=True)
 
-    coordinador = st.session_state.get(
-        "coordinador_seleccionado",
-        obtener_coordinador_archivo(pdf_path),
-    )
     nombre_reporte = os.path.basename(pdf_path).replace(".pdf", "").replace("_", " ")
     st.markdown('<div class="titulo-kpi">TABLERO OPERATIVO OUTBOUND</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="subtitulo-kpi">Coordinador: <b>{coordinador}</b><br>{nombre_reporte}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown(f'<div class="subtitulo-kpi">{nombre_reporte}</div>', unsafe_allow_html=True)
 
     filas_tarjetas = [
         [("INTENTOS", "Intentos"), ("CONECTADA", "Conectada"), ("NO CONECTADA", "No conectada")],
