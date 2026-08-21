@@ -10,6 +10,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import glob
+import unicodedata
 
 
 # ============================================================
@@ -133,87 +134,89 @@ def extraer_texto_pdf(pdf_path):
 # ============================================================
 
 def extraer_resumen(texto):
+    campos = [
+        "Intentos", "Conectada", "No conectada", "Abandonada", "Atendida",
+        "Tipificada", "No tipificada", "Titular", "No titular", "Buzón",
+        "Indefinida", "Negativa", "Efectiva", "Interesado", "Seguimiento",
+        "Amarillo",
+    ]
+    globales = {campo: 0 for campo in campos}
 
-    globales = {
-        "Registros Cargados": 0,
-        "Intentos de Llamadas": 0,
-        "Llamadas Conectadas": 0,
-        "Sin Tipificar": 0,
-        "Llamadas Tipificadas": 0,
-        "Abandonadas": 0,
-        "Contacto Efectivo": 0,
-        "Contacto Negativo": 0,
-        "Tipificación Correcta": 0,
-        "Tipificación Incorrecta": 0,
-        "% Campaña": 0,
-        "% Efectivo": 0,
-        "% Negativo": 0
+    def normalizar_linea(valor):
+        valor = str(valor).replace("�", "o")
+        valor = unicodedata.normalize("NFKD", valor)
+        return "".join(c for c in valor if not unicodedata.combining(c)).strip().lower()
+
+    lineas_originales = [x.strip() for x in texto.splitlines() if x.strip()]
+    lineas = [normalizar_linea(x) for x in lineas_originales]
+    filas = [
+        (["intentos"], ["Intentos"]),
+        (["conectada", "no conectada"], ["Conectada", "No conectada"]),
+        (["abandonada", "atendida"], ["Abandonada", "Atendida"]),
+        (["tipificada", "no tipificada"], ["Tipificada", "No tipificada"]),
+        (["titular", "no titular", "buzon", "indefinida"], ["Titular", "No titular", "Buzón", "Indefinida"]),
+        (["negativa", "efectiva"], ["Negativa", "Efectiva"]),
+        (["interesado", "seguimiento"], ["Interesado", "Seguimiento"]),
+        (["amarillo"], ["Amarillo"]),
+    ]
+
+    usados = set()
+    for etiquetas_busqueda, claves in filas:
+        for i, linea in enumerate(lineas[:-1]):
+            if i in usados or not all(etiqueta in linea for etiqueta in etiquetas_busqueda):
+                continue
+            valores = re.findall(r"\d[\d,]*", lineas_originales[i + 1])
+            if len(valores) >= len(claves):
+                for clave, valor in zip(claves, valores):
+                    globales[clave] = int(numero(valor))
+                usados.add(i)
+                break
+
+    # Compatibilidad con los títulos de la versión anterior del PDF.
+    compatibilidad = {
+        "Intentos": r"Intentos\s+de\s+Llamadas\s+([\d,]+)",
+        "Conectada": r"Llamadas\s+Conectadas\s+([\d,]+)",
+        "Abandonada": r"Abandonadas\s+([\d,]+)",
+        "Tipificada": r"Llamadas\s+Tipificadas\s+([\d,]+)",
+        "No tipificada": r"Sin\s+Tipificar\s+([\d,]+)",
+        "Efectiva": r"Contacto\s+Efectivo\s+([\d,]+)",
+        "Negativa": r"Contacto\s+Negativo\s+([\d,]+)",
     }
+    for clave, patron in compatibilidad.items():
+        if globales[clave] == 0:
+            encontrado = re.search(patron, texto, re.IGNORECASE)
+            if encontrado:
+                globales[clave] = int(numero(encontrado.group(1)))
 
-    # --------------------------------------------------------
-    # Buscar cada dato dentro del texto
-    # --------------------------------------------------------
-
-    patrones = {
-
-        "Registros Cargados":
-            r"Registros\s+Cargados\s+([\d,]+)",
-
-        "Intentos de Llamadas":
-            r"Intentos\s+de\s+Llamadas\s+([\d,]+)",
-
-        "Llamadas Conectadas":
-            r"Llamadas\s+Conectadas\s+([\d,]+)",
-
-        "Sin Tipificar":
-            r"Sin\s+Tipificar\s+([\d,]+)",
-
-        "Llamadas Tipificadas":
-            r"Llamadas\s+Tipificadas\s+([\d,]+)",
-
-        "Abandonadas":
-            r"Abandonadas\s+([\d,]+)",
-
-        "% Efectivo":
-            r"%\s*Efectivo\s+([\d.]+)\s*%",
-
-        "Contacto Efectivo":
-            r"Contacto\s+Efectivo\s+([\d,]+)",
-
-        "% Negativo":
-            r"%\s*Negativo\s+([\d.]+)\s*%",
-
-        "Contacto Negativo":
-            r"Contacto\s+Negativo\s+([\d,]+)",
-
-        "Tipificación Correcta":
-            r"Tipificacion\s+Correcta\s+([\d,]+)",
-
-        "Tipificación Incorrecta":
-            r"Tipificacion\s+Incorrecta\s+([\d,]+)",
-
-        "% Campaña":
-            r"%\s*Campaña\s+([\d.]+)\s*%"
-    }
-
-    for campo, patron in patrones.items():
-
-        encontrado = re.search(
-            patron,
-            texto,
-            re.IGNORECASE
-        )
-
-        if encontrado:
-
-            valor = encontrado.group(1)
-
-            if "%" in campo:
-                globales[campo] = float(valor)
-            else:
-                globales[campo] = numero(valor)
-
+    if globales["Atendida"] == 0:
+        globales["Atendida"] = max(0, globales["Conectada"] - globales["Abandonada"])
+    if globales["No conectada"] == 0:
+        globales["No conectada"] = max(0, globales["Intentos"] - globales["Conectada"])
     return globales
+
+
+def extraer_agentes(texto):
+    """Extrae la tabla de agentes generada por el reporte de nuevos KPI."""
+    columnas = [
+        "Agente", "Nombre", "Hora inicio", "Total sesión", "Titular",
+        "No titular", "Buzón", "Indefinida", "Negativa", "Efectiva",
+        "Interesado", "Seguimiento", "Sin tipificar", "Mal tipificadas", "Total",
+    ]
+    filas = []
+    patron = re.compile(
+        r"^(\d{3,6})\s+(.*?)\s+(\d{1,2}:\d{2}:\d{2})\s+(\d{1,3}:\d{2})\s+"
+        r"((?:[\d,]+\s+){10}[\d,]+)$"
+    )
+    for linea in texto.splitlines():
+        encontrado = patron.match(linea.strip())
+        if not encontrado:
+            continue
+        valores = [int(numero(x)) for x in encontrado.group(5).split()]
+        filas.append([
+            encontrado.group(1), encontrado.group(2).strip(),
+            encontrado.group(3), encontrado.group(4), *valores,
+        ])
+    return pd.DataFrame(filas, columns=columnas)
 
 
 # ============================================================
@@ -1006,14 +1009,147 @@ def generar_dashboard():
         )
 
 
+def generar_dashboard_nuevos_kpi():
+    """Dashboard operativo basado en el embudo oficial de nuevos KPI."""
+    st.set_page_config(
+        page_title="Dashboard Call Center - Nuevos KPI",
+        page_icon="📊",
+        layout="wide",
+    )
+    pdf_path = seleccionar_reporte()
+    if not pdf_path:
+        return
+
+    texto_pdf = extraer_texto_pdf(pdf_path)
+    if not texto_pdf:
+        return
+
+    kpi = extraer_resumen(texto_pdf)
+    agentes = extraer_agentes(texto_pdf)
+
+    st.markdown("""
+    <style>
+      .titulo-kpi {text-align:center; color:#17365d; font-size:2.1rem; font-weight:750;}
+      .subtitulo-kpi {text-align:center; color:#64748b; margin-bottom:1.4rem;}
+      div[data-testid="stMetric"] {background:#f5f9fc; border:1px solid #cbd9e6;
+        border-radius:10px; padding:14px 16px; min-height:112px;}
+      div[data-testid="stMetricLabel"] {font-weight:650; color:#334155;}
+    </style>
+    """, unsafe_allow_html=True)
+
+    nombre_reporte = os.path.basename(pdf_path).replace(".pdf", "").replace("_", " ")
+    st.markdown('<div class="titulo-kpi">TABLERO OPERATIVO OUTBOUND</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="subtitulo-kpi">{nombre_reporte}</div>', unsafe_allow_html=True)
+
+    filas_tarjetas = [
+        [("INTENTOS", "Intentos"), ("CONECTADA", "Conectada"), ("NO CONECTADA", "No conectada")],
+        [("ABANDONADA", "Abandonada"), ("ATENDIDA", "Atendida"), ("TIPIFICADA", "Tipificada"), ("NO TIPIFICADA", "No tipificada")],
+        [("TITULAR", "Titular"), ("NO TITULAR", "No titular"), ("BUZÓN", "Buzón"), ("INDEFINIDA", "Indefinida")],
+        [("NEGATIVA", "Negativa"), ("EFECTIVA", "Efectiva"), ("INTERESADO", "Interesado"), ("SEGUIMIENTO", "Seguimiento"), ("AMARILLO", "Amarillo")],
+    ]
+    for fila in filas_tarjetas:
+        columnas = st.columns(len(fila))
+        for columna, (titulo, clave) in zip(columnas, fila):
+            with columna:
+                st.metric(titulo, f"{kpi[clave]:,}")
+        st.write("")
+
+    st.markdown("---")
+    st.header("Embudo de llamadas")
+
+    nodos = [
+        "Intentos", "Conectada", "No conectada", "Abandonada", "Atendida",
+        "Tipificada", "No tipificada", "Titular", "No titular", "Buzón",
+        "Indefinida", "Negativa", "Efectiva", "Interesado", "Seguimiento", "Amarillo",
+    ]
+    indice = {nombre: i for i, nombre in enumerate(nodos)}
+    relaciones = [
+        ("Intentos", "Conectada"), ("Intentos", "No conectada"),
+        ("Conectada", "Abandonada"), ("Conectada", "Atendida"),
+        ("Atendida", "Tipificada"), ("Atendida", "No tipificada"),
+        ("Tipificada", "Titular"), ("Tipificada", "No titular"),
+        ("Tipificada", "Buzón"), ("Tipificada", "Indefinida"),
+        ("Titular", "Negativa"), ("Titular", "Efectiva"),
+        ("Efectiva", "Interesado"), ("Efectiva", "Seguimiento"),
+        ("Interesado", "Amarillo"),
+    ]
+    fuente, destino, valores = [], [], []
+    for padre, hijo in relaciones:
+        valor = int(kpi[hijo])
+        if valor > 0:
+            fuente.append(indice[padre])
+            destino.append(indice[hijo])
+            valores.append(valor)
+
+    fig_embudo = go.Figure(go.Sankey(
+        arrangement="snap",
+        node=dict(
+            pad=20, thickness=22,
+            label=[f"{n}<br>{kpi[n]:,}" for n in nodos],
+            color=["#17365d", "#3b82f6", "#94a3b8", "#f59e0b", "#22c55e",
+                   "#2563eb", "#94a3b8", "#0f766e", "#64748b", "#64748b",
+                   "#64748b", "#dc2626", "#16a34a", "#059669", "#0ea5e9", "#eab308"],
+        ),
+        link=dict(source=fuente, target=destino, value=valores, color="rgba(59,130,246,.28)"),
+    ))
+    fig_embudo.update_layout(height=720, margin=dict(l=10, r=10, t=20, b=10), font_size=13)
+    st.plotly_chart(fig_embudo, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Clasificación de tipificadas")
+        clasificacion = pd.DataFrame({
+            "Clasificación": ["Titular", "No titular", "Buzón", "Indefinida"],
+            "Valor": [kpi["Titular"], kpi["No titular"], kpi["Buzón"], kpi["Indefinida"]],
+        })
+        fig = px.pie(clasificacion, names="Clasificación", values="Valor", hole=.45)
+        fig.update_layout(height=390, margin=dict(t=20, b=20, l=20, r=20))
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        st.subheader("Resultado del contacto titular")
+        resultado = pd.DataFrame({
+            "Resultado": ["Negativa", "Efectiva"],
+            "Valor": [kpi["Negativa"], kpi["Efectiva"]],
+        })
+        fig = px.bar(resultado, x="Resultado", y="Valor", color="Resultado", text="Valor")
+        fig.update_traces(textposition="outside")
+        fig.update_layout(height=390, showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+    st.header("Resumen por Agente / Extensión")
+    if agentes.empty:
+        st.info("El PDF seleccionado no contiene una tabla de agentes legible.")
+    else:
+        st.dataframe(agentes, use_container_width=True, hide_index=True)
+        grafica = agentes.copy()
+        grafica["Total"] = pd.to_numeric(grafica["Total"], errors="coerce").fillna(0)
+        fig = px.bar(
+            grafica.sort_values("Total", ascending=False),
+            x="Agente", y="Total", text="Total", color="Mal tipificadas",
+            title="Gestiones totales y concentración de malas tipificaciones",
+            color_continuous_scale="Reds",
+        )
+        fig.update_traces(textposition="outside")
+        fig.update_layout(height=460)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Validación de reconciliación de KPI"):
+        validaciones = pd.DataFrame([
+            ["Intentos", kpi["Intentos"], kpi["Conectada"] + kpi["No conectada"]],
+            ["Conectada", kpi["Conectada"], kpi["Abandonada"] + kpi["Atendida"]],
+            ["Atendida", kpi["Atendida"], kpi["Tipificada"] + kpi["No tipificada"]],
+            ["Tipificada", kpi["Tipificada"], kpi["Titular"] + kpi["No titular"] + kpi["Buzón"] + kpi["Indefinida"]],
+            ["Titular", kpi["Titular"], kpi["Negativa"] + kpi["Efectiva"]],
+            ["Efectiva", kpi["Efectiva"], kpi["Interesado"] + kpi["Seguimiento"]],
+        ], columns=["Nivel", "KPI padre", "Suma de ramas"])
+        validaciones["Diferencia"] = validaciones["KPI padre"] - validaciones["Suma de ramas"]
+        st.dataframe(validaciones, use_container_width=True, hide_index=True)
+
+
 # ============================================================
 # EJECUCIÓN
 # ============================================================
 
 if __name__ == "__main__":
-    generar_dashboard()
-
-
-
-
-
+    generar_dashboard_nuevos_kpi()
