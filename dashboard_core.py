@@ -166,33 +166,56 @@ def numero(valor):
 # EXTRAER TEXTO DEL PDF
 # ============================================================
 
-def extraer_texto_pdf(pdf_path):
+def extraer_secciones_pdf(pdf_path):
+    """Separa el concentrado y cada campaña usando los encabezados del PDF."""
 
     if not os.path.exists(pdf_path):
         st.error(
             f"No se encontró el archivo PDF:\n\n{pdf_path}"
         )
-        return ""
+        return {}
 
-    texto = ""
+    secciones = {}
+    seccion_actual = "Concentrado general"
 
     try:
 
         with pdfplumber.open(pdf_path) as pdf:
 
-            for pagina in pdf.pages:
+            for numero_pagina, pagina in enumerate(pdf.pages):
 
-                contenido = pagina.extract_text()
+                contenido = pagina.extract_text() or ""
+
+                encabezado_campania = re.search(
+                    r"CAMPA.A\s*/\s*ARCHIVO:\s*([^\r\n]+)",
+                    contenido,
+                    flags=re.IGNORECASE,
+                )
+                if encabezado_campania:
+                    seccion_actual = encabezado_campania.group(1).strip()
 
                 if contenido:
-                    texto += "\n" + contenido
+                    seccion = secciones.setdefault(
+                        seccion_actual,
+                        {"texto": "", "paginas": []},
+                    )
+                    seccion["texto"] += "\n" + contenido
+                    seccion["paginas"].append(numero_pagina)
 
     except Exception as e:
 
         st.error(f"Error leyendo el PDF: {e}")
-        return ""
+        return {}
 
-    return texto
+    return secciones
+
+
+def extraer_texto_pdf(pdf_path):
+    """Compatibilidad: devuelve todo el texto del PDF."""
+    return "\n".join(
+        seccion["texto"]
+        for seccion in extraer_secciones_pdf(pdf_path).values()
+    )
 
 
 # ============================================================
@@ -261,27 +284,105 @@ def extraer_resumen(texto):
     return globales
 
 
-def extraer_agentes(texto):
-    """Extrae la tabla de agentes generada por el reporte de nuevos KPI."""
+def extraer_agentes(texto, pdf_path=None, paginas_pdf=None):
+    """Extrae la tabla por agente, incluso si sesión/nombre vienen vacíos o desbordados."""
     columnas = [
         "Agente", "Nombre", "Hora inicio", "Total sesión", "Titular",
         "No titular", "Buzón", "Indefinida", "Negativa", "Efectiva",
         "Interesado", "Seguimiento", "Sin tipificar", "Mal tipificadas", "Total",
     ]
     filas = []
-    patron = re.compile(
-        r"^(\d{3,6})\s+(.*?)\s+(\d{1,2}:\d{2}:\d{2})\s+(\d{1,3}:\d{2})\s+"
-        r"((?:[\d,]+\s+){10}[\d,]+)$"
+
+    def celda(valor):
+        return re.sub(r"\s+", " ", str(valor or "").replace("\n", " ")).strip()
+
+    def agregar_fila(agente, nombre, hora_inicio, total_sesion, metricas):
+        if not re.fullmatch(r"\d{3,6}", agente or "") or len(metricas) != 11:
+            return
+        filas.append([
+            agente, nombre, hora_inicio, total_sesion,
+            *[int(numero(valor)) for valor in metricas],
+        ])
+
+    patron_texto = re.compile(
+        r"^(\d{3,6})(?:\s+(.*?))?\s+((?:[\d,]+\s+){10}[\d,]+)$"
     )
+    nombres_texto = {}
     for linea in texto.splitlines():
-        encontrado = patron.match(linea.strip())
+        coincidencia = patron_texto.match(linea.strip())
+        if coincidencia:
+            nombres_texto[coincidencia.group(1)] = celda(coincidencia.group(2))
+
+    # Método principal: pdfplumber conserva las 15 celdas aunque el texto
+    # extraído de la página omita Hora inicio y Total sesión.
+    if pdf_path and os.path.exists(pdf_path):
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                paginas_permitidas = (
+                    set(paginas_pdf) if paginas_pdf is not None else None
+                )
+                for numero_pagina, pagina in enumerate(pdf.pages):
+                    if (
+                        paginas_permitidas is not None
+                        and numero_pagina not in paginas_permitidas
+                    ):
+                        continue
+                    for tabla in pagina.extract_tables() or []:
+                        if not tabla or len(tabla[0]) < 15:
+                            continue
+                        encabezado = [celda(x).lower() for x in tabla[0]]
+                        if not encabezado or encabezado[0] != "agente":
+                            continue
+                        for registro in tabla[1:]:
+                            if not registro or len(registro) < 15:
+                                continue
+                            valores = [celda(x) for x in registro[:15]]
+                            agente = valores[0]
+                            nombre_partes = [valores[1]] if valores[1] else []
+                            hora_inicio = valores[2] if re.fullmatch(r"\d{1,2}:\d{2}:\d{2}", valores[2]) else ""
+                            total_sesion = valores[3] if re.fullmatch(r"\d{1,3}:\d{2}", valores[3]) else ""
+                            # Los nombres largos pueden invadir visualmente las
+                            # dos celdas vacías de sesión; se reconstruyen aquí.
+                            if valores[2] and not hora_inicio:
+                                nombre_partes.append(valores[2])
+                            if valores[3] and not total_sesion:
+                                nombre_partes.append(valores[3])
+                            agregar_fila(
+                                agente,
+                                " ".join(x for x in nombre_partes if x).strip(),
+                                hora_inicio,
+                                total_sesion,
+                                valores[-11:],
+                            )
+        except Exception as error:
+            print(f"No se pudo extraer la tabla estructurada de agentes: {error}")
+
+    if filas:
+        for fila in filas:
+            if fila[0] in nombres_texto:
+                fila[1] = nombres_texto[fila[0]]
+        return pd.DataFrame(filas, columns=columnas).drop_duplicates(
+            subset=["Agente"], keep="first"
+        )
+
+    # Respaldo para PDF antiguos: toma los 11 KPI desde el final de cada fila
+    # sin exigir que las columnas de sesión estén informadas.
+    for linea in texto.splitlines():
+        encontrado = patron_texto.match(linea.strip())
         if not encontrado:
             continue
-        valores = [int(numero(x)) for x in encontrado.group(5).split()]
-        filas.append([
-            encontrado.group(1), encontrado.group(2).strip(),
-            encontrado.group(3), encontrado.group(4), *valores,
-        ])
+        prefijo = celda(encontrado.group(2))
+        hora_inicio = ""
+        total_sesion = ""
+        tokens = prefijo.split()
+        if tokens and re.fullmatch(r"\d{1,3}:\d{2}", tokens[-1]):
+            total_sesion = tokens.pop()
+        if tokens and re.fullmatch(r"\d{1,2}:\d{2}:\d{2}", tokens[-1]):
+            hora_inicio = tokens.pop()
+        agregar_fila(
+            encontrado.group(1), " ".join(tokens), hora_inicio,
+            total_sesion, encontrado.group(3).split(),
+        )
     return pd.DataFrame(filas, columns=columnas)
 
 
@@ -1086,12 +1187,36 @@ def generar_dashboard_nuevos_kpi():
     if not pdf_path:
         return
 
-    texto_pdf = extraer_texto_pdf(pdf_path)
-    if not texto_pdf:
+    secciones_pdf = extraer_secciones_pdf(pdf_path)
+    if not secciones_pdf:
         return
 
+    nombres_secciones = list(secciones_pdf)
+    if len(nombres_secciones) > 1:
+        seccion_seleccionada = st.sidebar.selectbox(
+            "Seleccionar concentrado o campaña",
+            nombres_secciones,
+            format_func=lambda nombre: (
+                nombre if nombre == "Concentrado general"
+                else f"Campaña: {nombre}"
+            ),
+        )
+        st.sidebar.caption(
+            f"{len(nombres_secciones) - 1} campaña(s) disponible(s) "
+            "en este reporte."
+        )
+    else:
+        seccion_seleccionada = nombres_secciones[0]
+
+    seccion_pdf = secciones_pdf[seccion_seleccionada]
+    texto_pdf = seccion_pdf["texto"]
+
     kpi = extraer_resumen(texto_pdf)
-    agentes = extraer_agentes(texto_pdf)
+    agentes = extraer_agentes(
+        texto_pdf,
+        pdf_path,
+        paginas_pdf=seccion_pdf["paginas"],
+    )
 
     st.markdown("""
     <style>
@@ -1099,7 +1224,12 @@ def generar_dashboard_nuevos_kpi():
       .subtitulo-kpi {text-align:center; color:#64748b; margin-bottom:1.4rem;}
       div[data-testid="stMetric"] {background:#f5f9fc; border:1px solid #cbd9e6;
         border-radius:10px; padding:14px 16px; min-height:112px;}
-      div[data-testid="stMetricLabel"] {font-weight:650; color:#334155;}
+      div[data-testid="stMetricLabel"] {
+        font-weight:800;
+        color:#17365d;
+        font-size:1rem;
+        letter-spacing:.02em;
+      }
     </style>
     """, unsafe_allow_html=True)
 
@@ -1110,7 +1240,8 @@ def generar_dashboard_nuevos_kpi():
     nombre_reporte = os.path.basename(pdf_path).replace(".pdf", "").replace("_", " ")
     st.markdown('<div class="titulo-kpi">TABLERO OPERATIVO OUTBOUND</div>', unsafe_allow_html=True)
     st.markdown(
-        f'<div class="subtitulo-kpi">Coordinador: <b>{coordinador}</b><br>{nombre_reporte}</div>',
+        f'<div class="subtitulo-kpi">Coordinador: <b>{coordinador}</b><br>'
+        f'{nombre_reporte}<br>Vista: <b>{seccion_seleccionada}</b></div>',
         unsafe_allow_html=True,
     )
 
@@ -1156,16 +1287,40 @@ def generar_dashboard_nuevos_kpi():
 
     fig_embudo = go.Figure(go.Sankey(
         arrangement="snap",
+        textfont=dict(
+            family="Arial Black, Arial, sans-serif",
+            size=16,
+            color="#111827",
+        ),
         node=dict(
-            pad=20, thickness=22,
+            pad=24,
+            thickness=26,
             label=[f"{n}<br>{kpi[n]:,}" for n in nodos],
             color=["#17365d", "#3b82f6", "#94a3b8", "#f59e0b", "#22c55e",
                    "#2563eb", "#94a3b8", "#0f766e", "#64748b", "#64748b",
                    "#64748b", "#dc2626", "#16a34a", "#059669", "#0ea5e9", "#eab308"],
+            line=dict(color="#334155", width=1.2),
+            hovertemplate="<b>%{label}</b><extra></extra>",
         ),
-        link=dict(source=fuente, target=destino, value=valores, color="rgba(59,130,246,.28)"),
+        link=dict(
+            source=fuente,
+            target=destino,
+            value=valores,
+            color="rgba(147,197,253,.20)",
+            hovertemplate="%{source.label} → %{target.label}<br>%{value:,}<extra></extra>",
+        ),
     ))
-    fig_embudo.update_layout(height=720, margin=dict(l=10, r=10, t=20, b=10), font_size=13)
+    fig_embudo.update_layout(
+        height=780,
+        margin=dict(l=35, r=35, t=30, b=20),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(
+            family="Arial Black, Arial, sans-serif",
+            size=16,
+            color="#111827",
+        ),
+    )
     st.plotly_chart(fig_embudo, use_container_width=True)
 
     col1, col2 = st.columns(2)
