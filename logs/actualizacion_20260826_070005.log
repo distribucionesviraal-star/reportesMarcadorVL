@@ -1,0 +1,32 @@
+============================================================
+Inicio: 26/08/2026  7:00:05.42
+Repositorio: C:\Users\Lenovo\Downloads\reporteD\dashboardGit
+Modo: Publicacion de PDF ya generados
+============================================================
+[26/08/2026  7:00:05.63] Actualizando rama main...
+From https://github.com/distribucionesviraal-star/reportesMarcadorVL
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[26/08/2026  7:00:08.87] PDF totales disponibles: 16
+[26/08/2026  7:00:09.17] Preparando cambios Git...
+warning: in the working copy of 'reportesDiariosVL/Resumen_20260825.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Bosques_20260825.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Dalila_20260825.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Elite_20260825.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Monterrey_20260825.pdf', LF will be replaced by CRLF the next time Git touches it
+[26/08/2026  7:00:10.51] Archivos pendientes detectados:
+reportesDiariosVL/Resumen_20260825.pdf
+reportesDiariosVL/Resumen_Bosques_20260825.pdf
+reportesDiariosVL/Resumen_Dalila_20260825.pdf
+reportesDiariosVL/Resumen_Elite_20260825.pdf
+reportesDiariosVL/Resumen_Monterrey_20260825.pdf
+[main c4fc555] Publicacion de reportes pendientes hasta 20260826
+ 5 files changed, 617 insertions(+)
+ create mode 100644 reportesDiariosVL/Resumen_20260825.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Bosques_20260825.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Dalila_20260825.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Elite_20260825.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Monterrey_20260825.pdf
+To https://github.com/distribucionesviraal-star/reportesMarcadorVL.git
+   75f4e27..c4fc555  main -> main
+[26/08/2026  7:00:13.62] EXITO: Reportes publicados en GitHub.

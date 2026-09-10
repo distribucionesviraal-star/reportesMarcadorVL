@@ -1,0 +1,35 @@
+============================================================
+Inicio: 28/08/2026  7:00:08.22
+Repositorio: C:\Users\Lenovo\Downloads\reporteD\dashboardGit
+Modo: Publicacion de PDF ya generados
+============================================================
+[28/08/2026  7:00:08.43] Actualizando rama main...
+From https://github.com/distribucionesviraal-star/reportesMarcadorVL
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[28/08/2026  7:00:12.73] PDF totales disponibles: 22
+[28/08/2026  7:00:13.40] Preparando cambios Git...
+warning: in the working copy of 'reportesDiariosVL/Resumen_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Dalila_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Manuel_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Moises_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Monterrey_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Salvador_20260827.pdf', LF will be replaced by CRLF the next time Git touches it
+[28/08/2026  7:00:15.10] Archivos pendientes detectados:
+reportesDiariosVL/Resumen_20260827.pdf
+reportesDiariosVL/Resumen_Dalila_20260827.pdf
+reportesDiariosVL/Resumen_Manuel_20260827.pdf
+reportesDiariosVL/Resumen_Moises_20260827.pdf
+reportesDiariosVL/Resumen_Monterrey_20260827.pdf
+reportesDiariosVL/Resumen_Salvador_20260827.pdf
+[main 776de4a] Publicacion de reportes pendientes hasta 20260828
+ 6 files changed, 1205 insertions(+)
+ create mode 100644 reportesDiariosVL/Resumen_20260827.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Dalila_20260827.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Manuel_20260827.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Moises_20260827.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Monterrey_20260827.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Salvador_20260827.pdf
+To https://github.com/distribucionesviraal-star/reportesMarcadorVL.git
+   c4fc555..776de4a  main -> main
+[28/08/2026  7:00:18.28] EXITO: Reportes publicados en GitHub.

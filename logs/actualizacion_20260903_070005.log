@@ -1,0 +1,54 @@
+============================================================
+Inicio: 03/09/2026  7:00:06.51
+Repositorio: C:\Users\Lenovo\Downloads\reporteD\dashboardGit
+Modo: Publicacion de PDF ya generados
+============================================================
+[03/09/2026  7:00:06.72] Actualizando rama main...
+From https://github.com/distribucionesviraal-star/reportesMarcadorVL
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+[03/09/2026  7:00:11.24] PDF totales disponibles: 45
+[03/09/2026  7:00:11.89] Preparando cambios Git...
+warning: in the working copy of 'reportesDiariosVL/Resumen_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_20260902.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Call_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Call_20260902.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Dalila_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Dalila_20260902.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Elite_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Elite_20260902.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Manuel_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Monterrey_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Monterrey_20260902.pdf', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'reportesDiariosVL/Resumen_Salvador_20260901.pdf', LF will be replaced by CRLF the next time Git touches it
+[03/09/2026  7:00:12.11] PDF nuevos o modificados pendientes: 12
+[03/09/2026  7:00:13.23] Archivos pendientes detectados:
+reportesDiariosVL/Resumen_20260901.pdf
+reportesDiariosVL/Resumen_20260902.pdf
+reportesDiariosVL/Resumen_Call_20260901.pdf
+reportesDiariosVL/Resumen_Call_20260902.pdf
+reportesDiariosVL/Resumen_Dalila_20260901.pdf
+reportesDiariosVL/Resumen_Dalila_20260902.pdf
+reportesDiariosVL/Resumen_Elite_20260901.pdf
+reportesDiariosVL/Resumen_Elite_20260902.pdf
+reportesDiariosVL/Resumen_Manuel_20260901.pdf
+reportesDiariosVL/Resumen_Monterrey_20260901.pdf
+reportesDiariosVL/Resumen_Monterrey_20260902.pdf
+reportesDiariosVL/Resumen_Salvador_20260901.pdf
+[main 63d22a9] Publicacion de reportes pendientes hasta 20260903
+ 12 files changed, 2143 insertions(+)
+ create mode 100644 reportesDiariosVL/Resumen_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_20260902.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Call_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Call_20260902.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Dalila_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Dalila_20260902.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Elite_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Elite_20260902.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Manuel_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Monterrey_20260901.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Monterrey_20260902.pdf
+ create mode 100644 reportesDiariosVL/Resumen_Salvador_20260901.pdf
+To https://github.com/distribucionesviraal-star/reportesMarcadorVL.git
+   c098345..63d22a9  main -> main
+[03/09/2026  7:00:16.43] EXITO: Reportes publicados en GitHub.
