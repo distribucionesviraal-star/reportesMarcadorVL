@@ -37,6 +37,15 @@ CARPETA_REPORTES = os.path.join(
 # el dashboard, por lo que el filtro no depende de parámetros modificables.
 DASHBOARD_COORDINADOR = os.environ.get("DASHBOARD_COORDINADOR", "").strip()
 
+# Variantes históricas encontradas en los nombres de los PDF. Todas se
+# agrupan bajo un solo coordinador para no tener que renombrar los archivos
+# que ya fueron publicados en GitHub.
+ALIAS_COORDINADORES = {
+    "sullivan": "Sullivan",
+    "sulivan": "Sullivan",
+    "siluvan": "Sullivan",
+}
+
 PDFS = glob.glob(
     os.path.join(
         CARPETA_REPORTES,
@@ -68,8 +77,13 @@ def obtener_coordinador_archivo(nombre_archivo):
     if not encontrado:
         # Resumen_20260820.pdf y nombres que no cumplen el patrón son generales.
         return "General"
-    coordinador = encontrado.group(1).strip("_ ")
-    return coordinador.replace("_", " ") if coordinador else "General"
+    coordinador = encontrado.group(1).strip("_ ").replace("_", " ")
+    if not coordinador:
+        return "General"
+    clave = unicodedata.normalize("NFKD", coordinador).encode(
+        "ascii", "ignore"
+    ).decode("ascii").casefold()
+    return ALIAS_COORDINADORES.get(clave, coordinador)
 
 
 def obtener_fecha_archivo(nombre_archivo):
@@ -98,8 +112,15 @@ def seleccionar_reporte():
     )
 
     if DASHBOARD_COORDINADOR:
+        clave_portal = unicodedata.normalize(
+            "NFKD", DASHBOARD_COORDINADOR
+        ).encode("ascii", "ignore").decode("ascii").casefold()
+        coordinador_portal = ALIAS_COORDINADORES.get(
+            clave_portal,
+            DASHBOARD_COORDINADOR,
+        )
         coincidencia = next(
-            (c for c in coordinadores if c.casefold() == DASHBOARD_COORDINADOR.casefold()),
+            (c for c in coordinadores if c.casefold() == coordinador_portal.casefold()),
             None,
         )
         if coincidencia is None:
